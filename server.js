@@ -32,10 +32,7 @@ app.use(express.static(path.join(__dirname, 'src')));
 // Setup server
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/my-react-app';
 
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(mongoURI)
   .then(() => {
     console.log('MongoDB connected successfully');
   })
