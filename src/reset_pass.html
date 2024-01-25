@@ -1,0 +1,70 @@
+<!-- reset_pass.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset</title>
+</head>
+<body>
+    <h1>Password Reset</h1>
+    <form id="resetForm">
+        <label for="newPassword">New Password:</label>
+        <input type="password" id="newPassword" name="newPassword" required>
+
+        <label for="confirmPassword">Confirm Password:</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" required>
+
+        <!-- Add a hidden input field to store the token -->
+        <input type="hidden" id="resetToken" name="resetToken" value="<%= token %>">
+
+        <button type="submit">Reset Password</button>
+    </form>
+
+    <script>
+        document.getElementById('resetForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            
+            // Send a request to your server to reset the password
+            const url = new URL(window.location.href);
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const resetToken = url.pathname.split('/').pop(); ;
+
+            // Add logic to check if passwords match
+            if (newPassword === confirmPassword) {
+                resetPassword(newPassword, resetToken);
+            } else {
+                alert('Passwords do not match. Please try again.');
+            }
+        });
+
+        async function resetPassword(newPassword, resetToken) {
+            try {
+                const response = await fetch(`/change_pass/request_change/${encodeURIComponent(resetToken)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        newPassword: newPassword,
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(data);
+                    alert("Password Changed!")
+                } else {
+                    const errorData = await response.json();
+                    console.error('Error resetting password:', errorData.message);
+                    // Optionally, handle error (show an error message)
+                }
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                // Optionally, handle unexpected errors
+            }
+        }
+    </script>
+</body>
+</html>
