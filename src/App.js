@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
-
-// Local Imports
 import RegisterUser from './RegisterUser';
 import ForgotPassword from './ForgotPass';
 import ChatRoom from './ChatRoom';
@@ -12,6 +10,7 @@ const App = () => {
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
   const [showChatRoom, setShowChatRoom] = useState(false);
+  const [chatRoomName, setChatRoomName] = useState('');
 
   const handleLogin = async () => {
     try {
@@ -21,15 +20,12 @@ const App = () => {
       });
 
       if (response.data.status === 'success') {
-        // Login successful, update state or perform other actions
         setLoggedIn(true);
       } else {
-        // Handle login failure
         alert(response.data.message);
       }
     } catch (error) {
       console.error('Login error:', error);
-      // Handle login error
       alert('Login failed. Please try again.' + error);
     }
   };
@@ -40,7 +36,11 @@ const App = () => {
   };
 
   const handleCreateChatRoom = () => {
-    setShowChatRoom(true);
+    const roomName = window.prompt('Enter a chat room name:');
+    if (roomName) {
+      setChatRoomName(roomName);
+      setShowChatRoom(true);
+    }
   };
 
   return (
@@ -48,12 +48,12 @@ const App = () => {
       {loggedIn ? (
         <div>
           <h1>Welcome, {username}!</h1>
-          <button onClick={handleLogout}>Logout</button>
+          <button id="logoutButton" onClick={handleLogout}>Logout</button>
           
-          {showChatRoom && <ChatRoom username={username} />} {/* Render ChatRoom component */}
-          
+          {showChatRoom && <ChatRoom username={username} chatRoomName={chatRoomName} />} {/* Render ChatRoom component */}
+
           {!showChatRoom && (
-            <button onClick={handleCreateChatRoom}>Create Chat Room</button>
+            <button id="createChatRoomButton" onClick={handleCreateChatRoom}>Create Chat Room</button>
           )}
         </div>
       ) : (
@@ -63,6 +63,7 @@ const App = () => {
             Username:
             <input
               type="text"
+              id="usernameInput"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -72,12 +73,13 @@ const App = () => {
             Password:
             <input
               type="password"
+              id="passwordInput"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
           <br />
-          <button onClick={handleLogin}>Login</button>
+          <button id="loginButton" onClick={handleLogin}>Login</button>
           <ForgotPassword />
           <RegisterUser />
         </div>

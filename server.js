@@ -1,3 +1,5 @@
+// server.js
+
 require('dotenv').config();
 
 const cors = require('cors');
@@ -51,12 +53,20 @@ mongoose.connect(mongoURI)
 
 // WebSocket server
 io.on('connection', (socket) => {
-  console.log('User connected');
 
-  socket.on('joinChatRoom', (username) => {
+  socket.on('joinChatRoom', (data) => {
+    const { username } = data;
     console.log('User joined chat room:', username);
     users.set(socket.id, username);
-    io.emit('userJoined', { username, message: 'has joined the chat.' });
+    
+    // Emit userJoined event only to the user who joined
+    socket.emit('userJoined', { username, message: 'You have joined the chat.' });
+
+    // Broadcast to others that a new user has joined
+    socket.broadcast.emit('userJoined', { username, message: 'has joined the chat.' });
+
+    // Emit a system message to the chat room
+    io.emit('message', { username: 'System', message: `${username} has joined the chat.` });
   });
 
   socket.on('sendMessage', ({ username, message }) => {
@@ -66,9 +76,11 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     const username = users.get(socket.id);
-    users.delete(socket.id);
-    io.emit('userLeft', { username, message: 'has left the chat.' });
-    console.log('User disconnected:', username);
+    if (username) {
+      users.delete(socket.id);
+      io.emit('userLeft', { username, message: 'has left the chat.' });
+      console.log('User disconnected:', username);
+    }
   });
 });
 
@@ -145,8 +157,49 @@ app.get('/verify/:token', async (req, res) => {
 
 // Change Password
 app.post('/change-password', async (req, res) => {
-  // ... (existing password change code)
+  const { username, currentPassword, newPassword } = req.body;
+
+  try {
+    // Find the user by username
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found.',
+      });
+    }
+
+    // Check if the current password is correct
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Current password is incorrect.',
+      });
+    }
+
+    // Hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password changed successfully.',
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({
+      status: 'error',
+      message: `Password change failed: ${error.message || 'Unknown error'}`,
+    });
+  }
 });
+
 
 // Generate Verification Token
 function generateVerificationToken() {
@@ -178,8 +231,6 @@ function sendVerificationEmail(email, verificationToken) {
     }
   });
 }
-
-
 // Show what port is being loaded
 const port = process.env.PORT || 3001;
 server.listen(port, () => {
