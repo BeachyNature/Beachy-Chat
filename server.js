@@ -1,20 +1,29 @@
-// server.js
 require('dotenv').config();
 
 const cors = require('cors');
 const express = require('express');
+const http = require('http');
+const socketIO = require('socket.io');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const bcrypt = require('bcrypt'); 
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
-const User = require('./models/User')
+const User = require('./models/User');
 const changePassRouter = require('./routes/change_pass');
 const authRoutes = require('./routes/auth_routes');
 
 const app = express();
-const port = 3001;
+const server = http.createServer(app);
+const io = socketIO(server, {
+  cors: {
+    origin: "http://localhost:3000", // Update with your client's address
+    methods: ["GET", "POST"],
+  },
+});
+
+const users = new Map(); // Map to store connected users
 
 // Use routes
 app.use(bodyParser.json());
@@ -24,7 +33,7 @@ app.use('/change_pass', changePassRouter);
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views')); // Change 'views' to your actual views folder
+app.set('views', path.join(__dirname, 'views'));
 
 // Serve static files from the 'src' directory
 app.use(express.static(path.join(__dirname, 'src')));
@@ -40,8 +49,31 @@ mongoose.connect(mongoURI)
     console.error('MongoDB connection error:', error);
   });
 
+// WebSocket server
+io.on('connection', (socket) => {
+  console.log('User connected');
 
-//  Register user account
+  socket.on('joinChatRoom', (username) => {
+    console.log('User joined chat room:', username);
+    users.set(socket.id, username);
+    io.emit('userJoined', { username, message: 'has joined the chat.' });
+  });
+
+  socket.on('sendMessage', ({ username, message }) => {
+    console.log('Received message:', { username, message });
+    io.emit('message', { username, message });
+  });
+
+  socket.on('disconnect', () => {
+    const username = users.get(socket.id);
+    users.delete(socket.id);
+    io.emit('userLeft', { username, message: 'has left the chat.' });
+    console.log('User disconnected:', username);
+  });
+});
+
+
+// Register user account
 app.post('/register', async (req, res) => {
   const { username, password, email } = req.body;
 
@@ -79,7 +111,6 @@ app.post('/register', async (req, res) => {
   }
 });
 
-
 // Verify Token
 app.get('/verify/:token', async (req, res) => {
   const { token } = req.params;
@@ -112,12 +143,15 @@ app.get('/verify/:token', async (req, res) => {
   }
 });
 
+// Change Password
+app.post('/change-password', async (req, res) => {
+  // ... (existing password change code)
+});
 
-// Genreate Verification Token
+// Generate Verification Token
 function generateVerificationToken() {
   return crypto.randomBytes(32).toString('hex');
 }
-
 
 // Send the verification email for the user that signs up
 function sendVerificationEmail(email, verificationToken) {
@@ -147,6 +181,7 @@ function sendVerificationEmail(email, verificationToken) {
 
 
 // Show what port is being loaded
-app.listen(port, () => {
+const port = process.env.PORT || 3001;
+server.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });

@@ -11,7 +11,7 @@ const path = require('path');
 
 // Get the reset page
 router.get('/reset_pass/:token', (req, res) => {
-  res.sendFile(path.join(__dirname, '../src/reset_pass.html'));
+  res.sendFile(path.join(__dirname, '../views/reset_pass.html'));
 });
 
 

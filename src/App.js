@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 import './App.css';
+
+// Local Imports
 import RegisterUser from './RegisterUser';
 import ForgotPassword from './ForgotPass';
-import axios from 'axios';
+import ChatRoom from './ChatRoom';
 
 const App = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
+  const [showChatRoom, setShowChatRoom] = useState(false);
 
   const handleLogin = async () => {
     try {
@@ -32,6 +36,11 @@ const App = () => {
 
   const handleLogout = () => {
     setLoggedIn(false);
+    setShowChatRoom(false);
+  };
+
+  const handleCreateChatRoom = () => {
+    setShowChatRoom(true);
   };
 
   return (
@@ -40,6 +49,12 @@ const App = () => {
         <div>
           <h1>Welcome, {username}!</h1>
           <button onClick={handleLogout}>Logout</button>
+          
+          {showChatRoom && <ChatRoom username={username} />} {/* Render ChatRoom component */}
+          
+          {!showChatRoom && (
+            <button onClick={handleCreateChatRoom}>Create Chat Room</button>
+          )}
         </div>
       ) : (
         <div>
@@ -64,7 +79,6 @@ const App = () => {
           <br />
           <button onClick={handleLogin}>Login</button>
           <ForgotPassword />
-
           <RegisterUser />
         </div>
       )}
