@@ -1,5 +1,3 @@
-// server.js
-
 require('dotenv').config();
 
 const cors = require('cors');
@@ -8,7 +6,7 @@ const http = require('http');
 const socketIO = require('socket.io');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
@@ -18,7 +16,8 @@ const authRoutes = require('./routes/auth_routes');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIO(server, {
+
+const io = require('socket.io')(server, {
   cors: {
     origin: "http://localhost:3000", // Update with your client's address
     methods: ["GET", "POST"],
@@ -32,17 +31,14 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use('/auth', authRoutes);
 app.use('/change_pass', changePassRouter);
+app.use(express.static(path.join(__dirname, 'src')));
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Serve static files from the 'src' directory
-app.use(express.static(path.join(__dirname, 'src')));
-
 // Setup server
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/my-react-app';
-
 mongoose.connect(mongoURI)
   .then(() => {
     console.log('MongoDB connected successfully');
@@ -53,34 +49,34 @@ mongoose.connect(mongoURI)
 
 // WebSocket server
 io.on('connection', (socket) => {
-
   socket.on('joinChatRoom', (data) => {
     const { username } = data;
     console.log('User joined chat room:', username);
     users.set(socket.id, username);
-    
+
     // Emit userJoined event only to the user who joined
     socket.emit('userJoined', { username, message: 'You have joined the chat.' });
 
     // Broadcast to others that a new user has joined
     socket.broadcast.emit('userJoined', { username, message: 'has joined the chat.' });
 
-    // Emit a system message to the chat room
-    io.emit('message', { username: 'System', message: `${username} has joined the chat.` });
+    // Update user list and broadcast to all users
+    const userList = Array.from(users.values());
+    console.log(userList);
+    io.emit('userList', userList); // Emit the updated user list to all clients
+
   });
 
   socket.on('sendMessage', ({ username, message }) => {
     console.log('Received message:', { username, message });
-    io.emit('message', { username, message });
   });
 
   socket.on('disconnect', () => {
     const username = users.get(socket.id);
-    if (username) {
-      users.delete(socket.id);
-      io.emit('userLeft', { username, message: 'has left the chat.' });
-      console.log('User disconnected:', username);
-    }
+    users.delete(socket.id);
+    io.emit('userList', Array.from(users.values())); // Emit updated user list to all clients
+    io.emit('userLeft', { username, message: 'has left the chat.' });
+    console.log('User disconnected:', username);
   });
 });
 
@@ -123,6 +119,7 @@ app.post('/register', async (req, res) => {
   }
 });
 
+
 // Verify Token
 app.get('/verify/:token', async (req, res) => {
   const { token } = req.params;
@@ -154,6 +151,7 @@ app.get('/verify/:token', async (req, res) => {
     });
   }
 });
+
 
 // Change Password
 app.post('/change-password', async (req, res) => {
@@ -206,6 +204,7 @@ function generateVerificationToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+
 // Send the verification email for the user that signs up
 function sendVerificationEmail(email, verificationToken) {
   const transporter = nodemailer.createTransport({
@@ -231,6 +230,8 @@ function sendVerificationEmail(email, verificationToken) {
     }
   });
 }
+
+
 // Show what port is being loaded
 const port = process.env.PORT || 3001;
 server.listen(port, () => {

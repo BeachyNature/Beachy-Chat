@@ -4,44 +4,58 @@ import io from 'socket.io-client';
 const ChatRoom = ({ username, chatRoomName }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
-  const [hasJoined, setHasJoined] = useState(false);
+  const [usersList, setUsersList] = useState([]);
 
-  const socket = io('http://localhost:3001');
+  // Create a ref to store the socket instance
+  const socketRef = React.useRef();
 
   useEffect(() => {
-    if (!hasJoined) {
-      socket.emit('joinChatRoom', { username, chatRoomName });
-      setHasJoined(true);
-    }
+    // Initialize socket connection
+    socketRef.current = io('http://localhost:3001');
 
-  // Handle user joined event
-  socket.on('userJoined', (messageData) => {
-    setMessages((prevMessages) => [...prevMessages, messageData]);
-  });
+    // Join chat room when component mounts
+    socketRef.current.emit('joinChatRoom', { username, chatRoomName });
 
-  // Handle system message event
-  socket.on('message', (messageData) => {
-    setMessages((prevMessages) => [...prevMessages, messageData]);
-  });
+    // Handle userList event
+    socketRef.current.on('userList', (updatedUserList) => {
+      setUsersList(updatedUserList);
+    });
+
+    // Handle user joined event
+    socketRef.current.on('userJoined', ({ username, message }) => {
+      setMessages((prevMessages) => [...prevMessages, { username, message }]);
+    });
+
+    // Handle system message event
+    socketRef.current.on('message', ({ username, message }) => {
+      setMessages((prevMessages) => [...prevMessages, { username, message }]);
+    });
 
     // Clean up when component unmounts
     return () => {
-      socket.disconnect();
+      // Disconnect socket when component unmounts
+      socketRef.current.disconnect();
     };
-  }, [socket, username, chatRoomName, hasJoined]);
+  }, [username, chatRoomName]);
 
   const sendMessage = () => {
     if (messageInput.trim() !== '') {
-      socket.emit('sendMessage', { username, message: messageInput });
+      socketRef.current.emit('sendMessage', { username, message: messageInput });
       setMessages((prevMessages) => [...prevMessages, { username, message: messageInput }]);
       setMessageInput('');
     }
   };
 
+  const leaveChat = () => {
+    // Disconnect socket when user leaves the chat
+    socketRef.current.disconnect();
+    // Perform any additional actions, e.g., navigate to another page
+  };
+
   return (
     <div>
       <h2>Chat Room: {chatRoomName}</h2>
-      
+
       <div style={{ border: '1px solid #ccc', minHeight: '200px', padding: '10px', marginBottom: '10px' }}>
         {messages.map((msg, index) => (
           <div key={index} style={{ marginBottom: '10px' }}>
@@ -49,7 +63,14 @@ const ChatRoom = ({ username, chatRoomName }) => {
           </div>
         ))}
       </div>
-
+      <div>
+        <h3>Users in the Chat:</h3>
+        <ul>
+          {usersList.map((user, index) => (
+            <li key={index}>{user}</li>
+          ))}
+        </ul>
+      </div>
       <input
         type="text"
         value={messageInput}
@@ -57,6 +78,9 @@ const ChatRoom = ({ username, chatRoomName }) => {
         placeholder="Type your message..."
       />
       <button onClick={sendMessage}>Send</button>
+
+      {/* Add a "Leave Chat" button */}
+      <button onClick={leaveChat}>Leave Chat</button>
     </div>
   );
 };
