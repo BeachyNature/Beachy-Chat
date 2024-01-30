@@ -1,8 +1,8 @@
-// ForgotPassword.js
+// ForgotPass.js
 import React, { useState } from 'react';
 import axios from 'axios';
 
-const ForgotPassword = () => {
+const ForgotPass = () => {
   const [email, setEmail] = useState('');
 
   const handleForgotPassword = async () => {
@@ -29,4 +29,4 @@ const ForgotPassword = () => {
   );
 };
 
-export default ForgotPassword;
+export default ForgotPass;

@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const cors = require('cors');
+const multer = require('multer');
 const express = require('express');
 const http = require('http');
 const socketIO = require('socket.io');
@@ -10,6 +11,7 @@ const bcrypt = require('bcrypt');
 const bodyParser = require('body-parser');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const fileUpload = require('express-fileupload');
 const User = require('./models/User');
 const changePassRouter = require('./routes/change_pass');
 const authRoutes = require('./routes/auth_routes');
@@ -17,29 +19,40 @@ const authRoutes = require('./routes/auth_routes');
 const app = express();
 const server = http.createServer(app);
 
-const io = require('socket.io')(server, {
+// Client Address
+const io = socketIO(server, {
   cors: {
     origin: "http://localhost:3000", // Update with your client's address
     methods: ["GET", "POST"],
   },
 });
 
-const users = new Map(); // Map to store connected users
 
 // Use routes
 app.use(bodyParser.json());
 app.use(cors());
 app.use('/auth', authRoutes);
 app.use('/change_pass', changePassRouter);
-app.use(express.static(path.join(__dirname, 'src')));
+app.use(express.static(path.join(__dirname, 'src')));// Serve profile pictures
+app.use('/profilePictures', express.static(path.join(__dirname, 'public', 'profilePictures')));
+app.use(fileUpload()); // Use express-fileupload middleware
+
+// Example of increasing the file size limit (adjust according to your needs)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 
 // Set EJS as the view engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+const storage = multer.memoryStorage(); // Store the file in memory as a Buffer
+const upload = multer({ storage: storage });
+
+
 // Setup server
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/my-react-app';
-mongoose.connect(mongoURI)
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log('MongoDB connected successfully');
   })
@@ -47,7 +60,10 @@ mongoose.connect(mongoURI)
     console.error('MongoDB connection error:', error);
   });
 
-// WebSocket server
+
+
+// WebSocket server for chat room
+const users = new Map(); // Map to store connected users
 io.on('connection', (socket) => {
   socket.on('joinChatRoom', (data) => {
     const { username } = data;
@@ -62,15 +78,15 @@ io.on('connection', (socket) => {
 
     // Update user list and broadcast to all users
     const userList = Array.from(users.values());
-    console.log(userList);
     io.emit('userList', userList); // Emit the updated user list to all clients
-
   });
 
+  // Messages sent accross
   socket.on('sendMessage', ({ username, message }) => {
     console.log('Received message:', { username, message });
   });
 
+  // user disconnects
   socket.on('disconnect', () => {
     const username = users.get(socket.id);
     users.delete(socket.id);
@@ -81,9 +97,13 @@ io.on('connection', (socket) => {
 });
 
 
+
 // Register user account
 app.post('/register', async (req, res) => {
   const { username, password, email } = req.body;
+
+  // Extract the profile picture file from the request
+  const profilePicture = req.file ? req.file.buffer : null;
 
   try {
     const existingUser = await User.findOne({ username });
@@ -94,14 +114,15 @@ app.post('/register', async (req, res) => {
         message: 'Username already exists. Choose a different username.',
       });
     }
-
+    
     // Generate the verification token
     const verificationToken = generateVerificationToken();
 
     // Hash the password before storing it
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    const newUser = new User({ username, password: hashedPassword, email, verificationToken });
+    // Save new user for profile
+    const newUser = new User({ username, password: hashedPassword, email, verificationToken, profilePicture });
     await newUser.save();
 
     sendVerificationEmail(email, verificationToken);
@@ -110,6 +131,7 @@ app.post('/register', async (req, res) => {
       status: 'success',
       message: 'User registered successfully. Check your email for verification.',
     });
+
   } catch (error) {
     console.error('Error registering user:', error);
     res.status(500).json({
@@ -118,6 +140,7 @@ app.post('/register', async (req, res) => {
     });
   }
 });
+
 
 
 // Verify Token
@@ -151,6 +174,28 @@ app.get('/verify/:token', async (req, res) => {
     });
   }
 });
+
+
+// Server endpoint to handle profile picture upload
+app.post('/upload-profile-picture', upload.single('profilePicture'), async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id); // Assuming you have a user ID in the request
+
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'User not found.' });
+    }
+
+    // Save the profile picture data to the user document in MongoDB
+    user.profilePicture = req.file.buffer; // Assuming you are using Buffer to store the image data
+    await user.save();
+
+    res.status(200).json({ status: 'success', message: 'Profile picture uploaded successfully.' });
+  } catch (error) {
+    console.error('Error uploading profile picture:', error);
+    res.status(500).json({ status: 'error', message: 'Internal Server Error.' });
+  }
+});
+
 
 
 // Change Password

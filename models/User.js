@@ -21,7 +21,8 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
   verificationToken: String,
-  resetToken: String, // Add the resetToken field
+  resetToken: String,
+  profilePicture: Buffer, // Add this field for storing the profile picture
 });
 
 const User = mongoose.model('User', userSchema, 'user-info');

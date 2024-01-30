@@ -1,17 +1,33 @@
+// App.js
 import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
 import RegisterUser from './RegisterUser';
 import ForgotPassword from './ForgotPass';
 import ChatRoom from './ChatRoom';
+import Profile from './Profile';
+import EditProfileForm from './EditProfileForm';
 
 const App = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
-  const [showChatRoom, setShowChatRoom] = useState(false);
   const [chatRoomName, setChatRoomName] = useState('');
+  const [showChatRoom, setShowChatRoom] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
+  // Function to update the user profile when editing is saved
+  const handleProfileUpdate = (newProfilePicture) => {
+    setCurrentUser((prevUser) => ({
+      ...prevUser,
+      profilePicture: newProfilePicture,
+    }));
+  };
+
+  // Login Handler
   const handleLogin = async () => {
     try {
       const response = await axios.post('http://localhost:3001/auth/login', {
@@ -21,6 +37,7 @@ const App = () => {
 
       if (response.data.status === 'success') {
         setLoggedIn(true);
+        setCurrentUser(response.data.user); // Set the current user information
       } else {
         alert(response.data.message);
       }
@@ -43,17 +60,35 @@ const App = () => {
     }
   };
 
+  const handleForgotPasswordClick = () => {
+    setShowForgotPassword(true);
+  };
+
   return (
     <div className="App">
       {loggedIn ? (
         <div>
-          <h1>Welcome, {username}!</h1>
-          <button id="logoutButton" onClick={handleLogout}>Logout</button>
-          
-          {showChatRoom && <ChatRoom username={username} chatRoomName={chatRoomName} />} {/* Render ChatRoom component */}
+          {/* Render the Profile component when logged in */}
+          <Profile user={currentUser} onProfileUpdate={handleProfileUpdate} />
+
+          <div>
+            {isEditingProfile ? (
+              <EditProfileForm user={userProfile} setIsEditing={setIsEditingProfile} onProfileUpdate={handleProfileUpdate} />
+            ) : (
+              <Profile user={userProfile} onEditClick={() => setIsEditingProfile(true)} />
+            )}
+          </div>
+
+          <button id="logoutButton" onClick={handleLogout}>
+            Logout
+          </button>
+
+          {showChatRoom && <ChatRoom username={username} chatRoomName={chatRoomName} />}
 
           {!showChatRoom && (
-            <button id="createChatRoomButton" onClick={handleCreateChatRoom}>Create Chat Room</button>
+            <button id="createChatRoomButton" onClick={handleCreateChatRoom}>
+              Create Chat Room
+            </button>
           )}
         </div>
       ) : (
@@ -79,8 +114,17 @@ const App = () => {
             />
           </label>
           <br />
-          <button id="loginButton" onClick={handleLogin}>Login</button>
-          <ForgotPassword />
+          <button id="loginButton" onClick={handleLogin}>
+            Login
+          </button>
+
+          {/* Button to load ForgotPass component */}
+          <button id="forgotPasswordButton" onClick={handleForgotPasswordClick}>
+            Forgot Password
+          </button>
+
+          {/* Show ForgotPass component if state is true */}
+          {showForgotPassword && <ForgotPassword />}
           <RegisterUser />
         </div>
       )}
