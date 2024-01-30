@@ -1,4 +1,5 @@
 // EditProfileForm.js
+
 import React, { useState } from 'react';
 import axios from 'axios';
 
@@ -13,27 +14,30 @@ const EditProfileForm = ({ user, setIsEditing, onProfileUpdate }) => {
     try {
       const formData = new FormData();
       formData.append('profilePicture', newProfilePicture);
-
+  
       const response = await axios.post('http://localhost:3001/upload-profile-picture', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-     
+  
       // Assuming the response contains the updated profile picture URL
       const updatedProfilePictureUrl = response.data.profilePictureUrl;
-
+  
       // Update the user's profile picture URL
       user.profilePicture = updatedProfilePictureUrl;
-
+  
       // Update the user's profile in the parent component
       onProfileUpdate(updatedProfilePictureUrl);
+  
       setIsEditing(false);
-      
     } catch (error) {
       console.error('Error updating profile:', error);
+  
+      // Display an error message to the user (you can use a state variable for this)
+      alert('Failed to update profile picture. Please try again.');
     }
-  };
+  };  
 
   return (
     <div>

@@ -19,6 +19,8 @@ const authRoutes = require('./routes/auth_routes');
 const app = express();
 const server = http.createServer(app);
 
+const upload = multer();
+
 // Client Address
 const io = socketIO(server, {
   cors: {
@@ -26,7 +28,6 @@ const io = socketIO(server, {
     methods: ["GET", "POST"],
   },
 });
-
 
 // Use routes
 app.use(bodyParser.json());
@@ -46,13 +47,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-const storage = multer.memoryStorage(); // Store the file in memory as a Buffer
-const upload = multer({ storage: storage });
 
-
-// Setup server
+// MongoDB connection
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/my-react-app';
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(mongoURI, { useNewUrlParser: true })
   .then(() => {
     console.log('MongoDB connected successfully');
   })
@@ -176,11 +174,11 @@ app.get('/verify/:token', async (req, res) => {
 });
 
 
-// Server endpoint to handle profile picture upload
+// Middleware to handle file uploads
 app.post('/upload-profile-picture', upload.single('profilePicture'), async (req, res) => {
   try {
-    const user = await User.findById(req.user._id); // Assuming you have a user ID in the request
-
+    // Handling logic
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ status: 'error', message: 'User not found.' });
     }
@@ -195,7 +193,6 @@ app.post('/upload-profile-picture', upload.single('profilePicture'), async (req,
     res.status(500).json({ status: 'error', message: 'Internal Server Error.' });
   }
 });
-
 
 
 // Change Password

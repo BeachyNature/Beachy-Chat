@@ -1,11 +1,13 @@
+// ChatRoom.js
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
+import MessageBubble from './MessageBubble';
 
 const ChatRoom = ({ username, chatRoomName }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState('');
   const [usersList, setUsersList] = useState([]);
-
+  
   // Create a ref to store the socket instance
   const socketRef = React.useRef();
 
@@ -22,13 +24,13 @@ const ChatRoom = ({ username, chatRoomName }) => {
     });
 
     // Handle user joined event
-    socketRef.current.on('userJoined', ({ username, message }) => {
-      setMessages((prevMessages) => [...prevMessages, { username, message }]);
+    socketRef.current.on('userJoined', ({ username, message, profilePicture }) => {
+      setMessages((prevMessages) => [...prevMessages, { username, message, profilePicture }]);
     });
 
     // Handle system message event
-    socketRef.current.on('message', ({ username, message }) => {
-      setMessages((prevMessages) => [...prevMessages, { username, message }]);
+    socketRef.current.on('message', ({ username, message, profilePicture }) => {
+      setMessages((prevMessages) => [...prevMessages, { username, message, profilePicture }]);
     });
 
     // Clean up when component unmounts
@@ -58,11 +60,15 @@ const ChatRoom = ({ username, chatRoomName }) => {
 
       <div style={{ border: '1px solid #ccc', minHeight: '200px', padding: '10px', marginBottom: '10px' }}>
         {messages.map((msg, index) => (
-          <div key={index} style={{ marginBottom: '10px' }}>
-            <strong>{msg.username}:</strong> {msg.message}
-          </div>
+          <MessageBubble
+            key={index}
+            username={msg.username}
+            message={msg.message}
+            profilePicture={msg.profilePicture}
+          />
         ))}
       </div>
+      
       <div>
         <h3>Users in the Chat:</h3>
         <ul>
@@ -71,6 +77,7 @@ const ChatRoom = ({ username, chatRoomName }) => {
           ))}
         </ul>
       </div>
+
       <input
         type="text"
         value={messageInput}
