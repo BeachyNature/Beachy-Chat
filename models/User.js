@@ -20,9 +20,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  profileImage: {
+    type: Buffer,
+  },
   verificationToken: String,
   resetToken: String,
-  profilePicture: Buffer, // Add this field for storing the profile picture
 });
 
 const User = mongoose.model('User', userSchema, 'user-info');

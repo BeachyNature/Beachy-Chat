@@ -7,7 +7,7 @@ const ForgotPass = () => {
 
   const handleForgotPassword = async () => {
     try {
-      await axios.post('http://localhost:3001/change_pass/forgot-password', { email });
+      await axios.post('http://localhost:5000/change_pass/forgot-password', { email });
       alert('Password reset email sent. Check your email for instructions.');
     } catch (error) {
       console.error('Error sending forgot password request:', error);

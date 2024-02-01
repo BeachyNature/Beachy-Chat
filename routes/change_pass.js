@@ -126,7 +126,7 @@ function sendPasswordResetEmail(email, resetToken) {
       from: 'beachychat@gmail.com',
       to: email,
       subject: 'Password Reset',
-      html: `<p>Click the following link to reset your password: <a href="http://localhost:3001/change_pass/reset_pass/${resetToken}">Reset Password</a></p>`,
+      html: `<p>Click the following link to reset your password: <a href="http://localhost:5000/change_pass/reset_pass/${resetToken}">Reset Password</a></p>`,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {

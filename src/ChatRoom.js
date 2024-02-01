@@ -13,7 +13,7 @@ const ChatRoom = ({ username, chatRoomName }) => {
 
   useEffect(() => {
     // Initialize socket connection
-    socketRef.current = io('http://localhost:3001');
+    socketRef.current = io('http://localhost:5000');
 
     // Join chat room when component mounts
     socketRef.current.emit('joinChatRoom', { username, chatRoomName });
