@@ -1,67 +1,58 @@
 require('dotenv').config();
+
+// User Model
+const User = require('./models/User');
+
+// Connected server 
+const cors = require('cors');
+const express = require('express');
+const app = express();
 const http = require('http');
+const server = http.createServer(app);
+
+// Database builder and node mailer
 const mongoose = require('mongoose');
 const crypto = require('crypto');
-const path = require('path');
-const socketIO = require('socket.io');
-const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
-const jwt = require('jsonwebtoken');
-const express = require('express');
-const multer = require('multer');
-const Grid = require('gridfs-stream');
-const cors = require('cors');
-const fileUpload = require('express-fileupload');
-const fs = require('fs');
-const app = express();
-const { promisify } = require('util');
-const readFileAsync = promisify(fs.readFile);
+const path = require('path');
 
-
-// Loaded Routes 
-const User = require('./models/User');
+// Connected routes
 const changePassRouter = require('./routes/change_pass');
 const authRoutes = require('./routes/auth_routes');
 
+// File load in
+const bodyParser = require('body-parser');
+const multer = require('multer');
+const storage = multer.memoryStorage(); // Use memory storage for buffer
+const upload = multer({ storage: storage });
+const fileUpload = require('express-fileupload');
+const fs = require('fs');
+const { promisify } = require('util');
+const readFileAsync = promisify(fs.readFile);
 
-// Client Address
-const server = http.createServer(app);
+// File size limits
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-
-// Client Address
-const io = socketIO(server, {
+// Connect socket for messages
+const io = require('socket.io')(server, {
   cors: {
-    origin: "http://localhost:3000", // Update with your client's address
+    origin: "http://localhost:3000",
     methods: ["GET", "POST"],
   },
 });
 
 
-// CORS configuration
-const corsOptions = {
-  origin: 'http://localhost:3000',  // Replace with your React app's URL
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-
-
-// Memory mangager
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-
-// Routes 
-app.use(cors());
-app.use(cors(corsOptions));
+// Use routes
 app.use(bodyParser.json());
+app.use(cors());
 app.use('/auth', authRoutes);
 app.use('/change_pass', changePassRouter);
 app.use('/uploads', express.static('uploads'));
 app.use('/profilePictures', express.static(path.join(__dirname, 'public', 'profilePictures')));
-app.use(express.static(path.join(__dirname, 'src')));// Serve profile pictures
-app.use(fileUpload()); // Use express-fileupload middleware
+app.use(express.static(path.join(__dirname, 'src')));
+app.use(fileUpload());
 
 
 // Example of increasing the file size limit (adjust according to your needs)
@@ -74,18 +65,20 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 
-// MongoDB connection
+
+// Setup server
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/my-react-app';
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(mongoURI)
   .then(() => {
     console.log('MongoDB connected successfully');
   })
   .catch((error) => {
     console.error('MongoDB connection error:', error);
   });
-  
 
-// WebSocket server for chat room
+
+
+// WebSocket server
 const users = new Map(); // Map to store connected users
 io.on('connection', (socket) => {
   socket.on('joinChatRoom', (data) => {
@@ -101,15 +94,15 @@ io.on('connection', (socket) => {
 
     // Update user list and broadcast to all users
     const userList = Array.from(users.values());
+    console.log(userList);
     io.emit('userList', userList); // Emit the updated user list to all clients
+
   });
 
-  // Messages sent accross
   socket.on('sendMessage', ({ username, message }) => {
     console.log('Received message:', { username, message });
   });
 
-  // user disconnects
   socket.on('disconnect', () => {
     const username = users.get(socket.id);
     users.delete(socket.id);
@@ -122,23 +115,30 @@ io.on('connection', (socket) => {
 
 // Register user account
 app.post('/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, password, email } = req.body;
 
   try {
-    const existingUser = await User.findOne({ email });
-
+    
+    //Check if there is an existing user
+    const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email already registered. Choose a different email.',
+        message: 'Username already exists. Choose a different username.',
       });
     }
-    
-    const defaultImagePath = path.join(__dirname, 'public', 'default.jpg');
-    const defaultImageBuffer = await readFileAsync(defaultImagePath);
+
+    // Generate the verification token
     const verificationToken = generateVerificationToken();
+
+    // Hash the password before storing it
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Default image 
+    const defaultImagePath = path.join(__dirname, 'public', 'default.jpg');
+    const defaultImageBuffer = await readFileAsync(defaultImagePath);
+    
+    // Save the new user to the database
     const newUser = new User({
       username,
       email,
@@ -146,9 +146,9 @@ app.post('/register', async (req, res) => {
       profileImage: defaultImageBuffer,
       verificationToken,
     });
-
     await newUser.save();
 
+    // Send user verfiication email
     sendVerificationEmail(email, verificationToken);
 
     res.status(201).json({
@@ -167,7 +167,12 @@ app.post('/register', async (req, res) => {
 
 // Handle file upload
 app.post('/upload', upload.single('profileImage'), async (req, res) => {
-  const { userId } = req.body; // Assuming you pass the user ID from the client
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
   const profileImage = req.file.buffer;
 
   if (!profileImage) {
@@ -216,6 +221,7 @@ app.get('/loadImage', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
+
 
 
 // Verify Token
@@ -332,6 +338,6 @@ function sendVerificationEmail(email, verificationToken) {
 
 // Show what port is being loaded
 const port = process.env.PORT || 5000;
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+server.listen(port, () => {
+  console.log(`Server is listening on port ${port}`);
 });

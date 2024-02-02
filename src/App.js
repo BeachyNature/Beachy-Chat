@@ -22,7 +22,7 @@ const App = () => {
   // Function to update the user profile when editing is saved
   const handleProfileUpdate = (newProfilePicture) => {
     setCurrentUser((prevUser) => ({
-      ...prevUser,
+      prevUser,
       profilePicture: newProfilePicture,
     }));
   };

@@ -4,12 +4,14 @@ import EditProfileForm from './EditProfileForm';
 
 const Profile = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
+  const [imageSrc, setImageSrc] = useState(null);
 
   useEffect(() => {
-    // Set the profile image from the user prop when it changes
     if (user && user.profileImage) {
-      setProfileImage(URL.createObjectURL(new Blob([user.profileImage])));
+      const uint8Array = new Uint8Array(user.profileImage.data);
+      const blob = new Blob([uint8Array], { type: 'image/jpeg' });
+      const imageUrl = URL.createObjectURL(blob);
+      setImageSrc(imageUrl);
     }
   }, [user]);
 
@@ -22,9 +24,9 @@ const Profile = ({ user }) => {
           <p>Email: {user.email}</p>
 
           {/* Display user's profile picture or default image */}
-          {profileImage ? (
+          {imageSrc ? (
             <img
-              src={profileImage}
+              src={imageSrc}
               alt="Profile"
               style={{ maxWidth: '200px' }}
             />
@@ -36,7 +38,7 @@ const Profile = ({ user }) => {
             <EditProfileForm
               user={user}
               setIsEditing={setIsEditing}
-              onProfileUpdate={(newProfilePicture) => setProfileImage(newProfilePicture)}
+              onProfileUpdate={() => {}}
             />
           ) : (
             <div>
@@ -45,7 +47,7 @@ const Profile = ({ user }) => {
           )}
         </div>
       ) : (
-        <p>Loading user information...</p>
+        <p>TESTING</p>
       )}
     </div>
   );

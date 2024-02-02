@@ -75,6 +75,7 @@ router.post('/login', async (req, res) => {
       user: {
         username: user.username,
         email: user.email,
+        profileImage: user.profileImage,
       },
     });
   } catch (error) {

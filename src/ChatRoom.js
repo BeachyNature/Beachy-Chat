@@ -24,13 +24,13 @@ const ChatRoom = ({ username, chatRoomName }) => {
     });
 
     // Handle user joined event
-    socketRef.current.on('userJoined', ({ username, message, profilePicture }) => {
-      setMessages((prevMessages) => [...prevMessages, { username, message, profilePicture }]);
+    socketRef.current.on('userJoined', ({ username, message }) => {
+      setMessages((prevMessages) => [...prevMessages, { username, message }]);
     });
-
+  
     // Handle system message event
-    socketRef.current.on('message', ({ username, message, profilePicture }) => {
-      setMessages((prevMessages) => [...prevMessages, { username, message, profilePicture }]);
+    socketRef.current.on('message', ({ username, message }) => {
+      setMessages((prevMessages) => [...prevMessages, { username, message }]);
     });
 
     // Clean up when component unmounts
@@ -47,7 +47,7 @@ const ChatRoom = ({ username, chatRoomName }) => {
       setMessageInput('');
     }
   };
-
+  
   const leaveChat = () => {
     // Disconnect socket when user leaves the chat
     socketRef.current.disconnect();
@@ -85,8 +85,6 @@ const ChatRoom = ({ username, chatRoomName }) => {
         placeholder="Type your message..."
       />
       <button onClick={sendMessage}>Send</button>
-
-      {/* Add a "Leave Chat" button */}
       <button onClick={leaveChat}>Leave Chat</button>
     </div>
   );

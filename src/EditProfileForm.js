@@ -9,10 +9,12 @@ function EditProfileForm() {
     setImage(e.target.files[0]);
   };
 
-  const handleSubmit = async () => {
+  // Inside your EditProfileForm.js component
+  const handleUpload = async () => {
     try {
       const formData = new FormData();
       formData.append('profileImage', image);
+      // formData.append('userId', user._id); // Assuming user._id is the user's ID
 
       await axios.post('http://localhost:5000/upload', formData, {
         headers: {
@@ -25,6 +27,7 @@ function EditProfileForm() {
       console.error('Error uploading image:', error);
     }
   };
+
 
   const handleLoadImage = async () => {
     try {
@@ -50,10 +53,9 @@ function EditProfileForm() {
       </div>
       <div>
         <label>Profile Image:</label>
-        {/* Input for selecting an image file */}
         <input type="file" onChange={handleImageChange} />
       </div>
-      <button onClick={handleSubmit}>Upload</button>
+      <button onClick={handleUpload}>Upload</button>
       <button onClick={handleLoadImage}>Load Image</button>
       {/* Display loaded image if available */}
       {imageUrl && (
