@@ -22,11 +22,10 @@ const changePassRouter = require('./routes/change_pass');
 const authRoutes = require('./routes/auth_routes');
 
 // File load in
-const bodyParser = require('body-parser');
-const multer = require('multer');
-const storage = multer.memoryStorage(); // Use memory storage for buffer
-const upload = multer({ storage: storage });
 const fileUpload = require('express-fileupload');
+const multer = require('multer');
+const upload = multer();
+const bodyParser = require('body-parser');
 const fs = require('fs');
 const { promisify } = require('util');
 const readFileAsync = promisify(fs.readFile);
@@ -49,10 +48,7 @@ app.use(bodyParser.json());
 app.use(cors());
 app.use('/auth', authRoutes);
 app.use('/change_pass', changePassRouter);
-app.use('/uploads', express.static('uploads'));
 app.use('/profilePictures', express.static(path.join(__dirname, 'public', 'profilePictures')));
-app.use(express.static(path.join(__dirname, 'src')));
-app.use(fileUpload());
 
 
 // Example of increasing the file size limit (adjust according to your needs)
@@ -166,41 +162,23 @@ app.post('/register', async (req, res) => {
 
 
 // Handle file upload
-app.post('/upload', upload.single('profileImage'), async (req, res) => {
-  const { userId } = req.body;
+app.post('/upload', upload.single('profileImage'), async(req, res) => {
+  // Access user information from the form data
+  const userId = req.body.userId;
 
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-
+  // Access the uploaded image data
   const profileImage = req.file.buffer;
+  const user = await User.findOne();
+  user.profileImage = profileImage
+  await user.save();
 
-  if (!profileImage) {
-    return res.status(400).json({ error: 'No image provided' });
-  }
-
-  try {
-    // Find the user by ID
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    // Update the user's profileImage
-    user.profileImage = profileImage;
-
-    // Save the updated user to the database
-    await user.save();
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error('Error updating user profile image:', err);
-    res.status(500).json({ success: false, error: 'Internal Server Error' });
-  }
+  // Your logic to handle the file and associate it with the user
+  console.log(`User ID: ${userId}`);
+  console.log(profileImage);
+  
+  // Your logic to store the image and associate it with the user in the database
+  res.status(200).send('File uploaded successfully!');
 });
-
-
 
 // Load image
 app.get('/loadImage', async (req, res) => {

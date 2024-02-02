@@ -9,25 +9,23 @@ function EditProfileForm() {
     setImage(e.target.files[0]);
   };
 
-  // Inside your EditProfileForm.js component
-  const handleUpload = async () => {
-    try {
+  const handleSubmit = async () => {
+    try {      
       const formData = new FormData();
       formData.append('profileImage', image);
-      // formData.append('userId', user._id); // Assuming user._id is the user's ID
-
+  
       await axios.post('http://localhost:5000/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
+  
       alert('Image uploaded successfully!');
     } catch (error) {
       console.error('Error uploading image:', error);
     }
   };
-
+  
 
   const handleLoadImage = async () => {
     try {
@@ -47,17 +45,11 @@ function EditProfileForm() {
     <div>
       <h1>Image Uploader</h1>
       <div>
-        <label>Name:</label>
-        {/* Input for name (you can uncomment and add state if needed) */}
-        {/* <input type="text" value={name} onChange={(e) => setName(e.target.value)} /> */}
-      </div>
-      <div>
         <label>Profile Image:</label>
         <input type="file" onChange={handleImageChange} />
       </div>
-      <button onClick={handleUpload}>Upload</button>
+      <button onClick={handleSubmit}>Upload</button>
       <button onClick={handleLoadImage}>Load Image</button>
-      {/* Display loaded image if available */}
       {imageUrl && (
         <div>
           <h2>Loaded Image:</h2>

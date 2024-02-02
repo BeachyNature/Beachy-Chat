@@ -47,6 +47,7 @@ const App = () => {
     }
   };
 
+
   const handleLogout = () => {
     setLoggedIn(false);
     setShowChatRoom(false);
